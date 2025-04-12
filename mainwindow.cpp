@@ -7,6 +7,7 @@
 #include <QColor>
 #include "Graph.h"
 #include "mythread.h"
+#include"mygraphicsview.h"
 MyThread mythread;//线程
 const int pointnum=10000;//点数
 bool vispath1[50005];//最短路占用边标记
@@ -26,52 +27,13 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);//ui绑定
-
-    // 设置全局字体
-    QFont font("Arial", 12);
-    this->setFont(font);
-
-    // 设置布局边距
-    //ui->centralWidget->setContentsMargins(10, 10, 10, 10);
-
-    // 设置背景颜色
-    //this->setStyleSheet("background-color: #E3F2FD;");  // 浅蓝色背景
-
-    // 设置全局按钮样式（蓝色主题）
-    QString buttonStyle =
-        "QPushButton {"
-        "   background-color: #2196F3;"  // 正常状态-蓝色
-        "   border-radius: 8px;"        // 圆角
-        "   color: white;"              // 文字颜色
-        "   padding: 1px 1px;"         // 内边距
-        "   font-size: 14px;"          // 字体大小
-        "   font-weight: bold;"        // 字体加粗
-        "   transition: background-color 0.3s ease;"  // 渐变效果
-        "}"
-        "QPushButton:hover {"
-        "   background-color: #1976D2;"  // 悬停状态-深蓝色
-        "}"
-        "QPushButton:pressed {"
-        "   background-color: #0D47A1;"  // 按下状态-更深蓝色
-        "}";
-
-    // 应用样式到所有按钮
-    ui->shortpt->setStyleSheet(buttonStyle);
-    ui->nearpt->setStyleSheet(buttonStyle);
-    ui->pushButton->setStyleSheet(buttonStyle);
-    ui->toolButton->setStyleSheet(buttonStyle);
-    ui->toolButton_2->setStyleSheet(buttonStyle);
-    ui->toolButton_3->setStyleSheet(buttonStyle);
-    ui->toolButton_4->setStyleSheet(buttonStyle);
-    ui->toolButton_5->setStyleSheet(buttonStyle);
-    ui->toolButton_6->setStyleSheet(buttonStyle);
-    ui->toolButton_7->setStyleSheet(buttonStyle);
-
+    this->setFixedSize(1000, 900);
     m_scene=new QGraphicsScene;//场景创建
     graphicsView=new MyGraphicsView(this);//视图创建绑定主窗口
-    graphicsView->resize(680,680);//视图大小设定
+    graphicsView->resize(680,557);//视图大小设定
+      graphicsView->move(5, 120);
     graphicsView->setScene(m_scene);//场景塞进视图
-    graphicsView->setSceneRect(0,0,680,680);//场景大小设定
+    graphicsView->setSceneRect(0,0,680,680);//场景大小设定，场景的逻辑坐标系范围是 0 到 680
     srand(time(0));
     Gp.StartRandFlow();//随机边流量线程启动
     auto edgenum=Gp.GetEdgeNums();//获取边数
@@ -80,8 +42,9 @@ MainWindow::MainWindow(QWidget *parent)
     {
         litem[i]=new QGraphicsLineItem;
         QGraphicsLineItem *item=litem[i];
-        item->setPos(0,0);
+        item->setPos(0,0); // 可以省略，默认局部原点坐标（0，0）
         //除50适应实际大小
+        // 32700/680约等于50
         item->setLine(Gp.P[Gp.E[i].P1].x/50,Gp.P[Gp.E[i].P1].y/50,Gp.P[Gp.E[i].P2].x/50,Gp.P[Gp.E[i].P2].y/50);
         m_scene->addItem(item);//加入边图元
     }
@@ -93,9 +56,9 @@ MainWindow::MainWindow(QWidget *parent)
         ellipseitem[i]=new QGraphicsEllipseItem;
         QGraphicsEllipseItem *item=ellipseitem[i];
         item->setPos(0,0);
-        item->setPen(QPen(Qt::black));
-        item->setBrush(Qt::black);
-        item->setRect(QRect(Gp.P[i].x/50,Gp.P[i].y/50,1,1));
+        item->setPen(QPen(Qt::black)); //设置边框为黑色
+        item->setBrush(Qt::black); // 设置圆填充颜色为黑色
+        item->setRect(QRect(Gp.P[i].x/50,Gp.P[i].y/50,1,1)); // 左上角局部坐标，宽，高
         m_scene->addItem(item);
     }
     //不同流量比例提示颜色
@@ -115,7 +78,7 @@ void MainWindow::setnearpoint(double x,double y)
     {
         for(auto [_,eg]:Gp.G[nearpoint[i]])
         {
-            int num=eg,num2=eg^1;
+            int num=eg,num2=eg^1;// 明白意思，但数据结构不清晰，有点迷糊
             vispath2[num]=vispath2[num2]=0;
         }
         vispoint2[nearpoint[i]]=0;
@@ -143,11 +106,11 @@ void MainWindow::setnearpoint(double x,double y)
         item->setBrush(Qt::blue);
     }
     //获取点编号并展示在列表里
-    QStringList strlist;
+    QStringList strlist;// 这个有用上吗？是不是可以删去？
     QStandardItemModel *ItemModel =new QStandardItemModel(this);
     for(int i=1;i<(int)nearpoint.size();i++)
     {
-        QString string=QString::number(nearpoint[i]);
+        QString string=QString::number(nearpoint[i]); // 转换为string
         QStandardItem *item=new QStandardItem(string);
         ItemModel->appendRow(item);
     }
@@ -201,14 +164,17 @@ void MainWindow::updatepath()
 {
     auto edgenum=Gp.GetEdgeNums();
     //对所有边遍历
+    //是否每次都需要刷新所有的边？
     for(int i=0;i<(int)edgenum;i++)
     {
         QGraphicsLineItem *item=litem[i];
+        // 最短路边染色
         if(vispath1[i])
         {
-            item->setPen(QPen(QColor("#006400"),2));
-            continue;
+            item->setPen(QPen(QColor("#006400"),2)); // 加宽以示区别
+            continue; // 跳过以下操作，进入下一个循环
         }
+        // 最近路边染色
         else if(vispath2[i])
         {
             item->setPen(QPen(QColor("#4169e1"),2));
@@ -235,6 +201,16 @@ void MainWindow::updatepoint()
         item->setBrush(Qt::black);
     }
 }
+//让选择的点移到视图中心，并将图放到最大以显示全部边
+void MainWindow::pointToCenter(double x,double y){
+    int temp=graphicsView->get_m_scalingOffset();
+    //判断是否放到最大
+    while(temp++<5){
+        graphicsView->scaling(1.6); //放大1.6倍
+    }
+    graphicsView->set_m_scalingOffset(5);
+    graphicsView->centerOn(QPointF(x, y));
+}
 //析构ui界面
 MainWindow::~MainWindow()
 {
@@ -246,32 +222,15 @@ void MainWindow::on_nearpt_clicked()
 {
     double x=ui->inputx->text().toDouble();
     double y=ui->inputy->text().toDouble();
-    if(x<0||x>32767||y<0||y>32767)return;//
+    if(x<0||x>32767||y<0||y>32767)return;// 这里缺少警示处理
     MainWindow::setnearpoint(x,y);
 }
 //最短路按钮
 void MainWindow::on_shortpt_clicked()
 {
-    // 设置按钮样式
-    ui->shortpt->setStyleSheet(
-        "QPushButton {"
-        "   background-color: #4CAF50;"
-        "   border-radius: 5px;"
-        "   color: white;"
-        "   padding: 5px;"
-        "}"
-        "QPushButton:hover {"
-        "   background-color: #45a049;"
-        "}"
-        "QPushButton:pressed {"
-        "   background-color: #357a38;"
-        "}"
-        );
-
-    // 原始逻辑
     int x=ui->inputx_2->text().toInt();
     int y=ui->inputy_2->text().toInt();
-    if(x>10000||x<1||y>10000||y<1) return;
+    if(x>10000||x<1||y>10000||y<1)return;//
     MainWindow::setshortestpath(x,y,0);
 }
 //时间最短路按钮
@@ -287,12 +246,13 @@ void MainWindow::mouseDoubleClickEvent(QMouseEvent *event)
 {
     if(event->button()!=Qt::RightButton)return;
     QPointF nowAnchor=graphicsView->mapToScene(event->pos());//获取的是视图的坐标要下沉到场景去获取真实坐标
-    double x=nowAnchor.x()*50,y=nowAnchor.y()*50;
+    double x=nowAnchor.x()*50,y=nowAnchor.y()*50; // 转换成实际坐标
     if(x<0||x>32767||y<0||y>32767)return;//边界判断
     else
     {
-        ui->inputx->setText(QString::number(x));
+        ui->inputx->setText(QString::number(x)); // 坐标显示
         ui->inputy->setText(QString::number(y));
+        pointToCenter(x/50,y/50);
         setnearpoint(x,y);
     }
 }
